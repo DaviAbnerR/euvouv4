@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Festas Ativas{% endblock %}
+
+{% block content %}
+<div class="container mt-4 d-flex justify-content-center">
+    <div class="w-100" style="max-width: 780px;">
+        <div id="festasList" class="scroll-feed"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(function(){
+    $.getJSON('/api/festas', function(festas){
+        if(festas.length === 0) {
+            $('#festasList').html('<div class="alert alert-info">Nenhuma festa disponível no momento.</div>');
+            return;
+        }
+        festas.forEach(function(festa){
+            let datas = festa.datas.map(d => d.split('-').reverse().join('/')).join(', ');
+            let style = festa.imagem_fundo ? `style="background-image:url('${festa.imagem_fundo}');background-size:cover;background-position:center;"` : '';
+            $('#festasList').append(`
+                <div class="card mb-4 feed-card shadow-sm" ${style}>
+    <div class="card-body text-${festa.imagem_fundo ? 'white' : 'dark'}"
+         style="font-size: 1.05rem; line-height: 1.6; font-family: Arial, sans-serif;
+                background-color: ${festa.imagem_fundo ? 'rgba(0, 0, 0, 0.4)' : 'transparent'};
+                border-radius: 0.5rem;
+                text-shadow: ${festa.imagem_fundo ? '2px 2px 4px rgba(0,0,0,0.8)' : '1px 1px 2px rgba(255,255,255,0.7)'};">
+         
+        <h5 class="card-title fw-bold">${festa.nome}</h5>
+        <p class="card-text mb-1"><strong>Local:</strong> ${festa.local}</p>
+        <p class="mb-1"><strong>Descrição:</strong> ${festa.descricao || '-'}</p>
+        <p class="mb-1"><strong>Datas:</strong> ${datas}</p>
+        <p class="mb-2"><strong>Valor do ingresso:</strong> R$ ${Number(festa.valor_ingresso).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+        <a href="/festa/${festa.id}" class="btn btn-primary w-100 mt-2">Comprar Ingresso</a>
+    </div>
+</div>
+
+
+            `);
+        });
+    });
+});
+</script>
+{% endblock %}

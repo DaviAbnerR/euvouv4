@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Rifas Ativas{% endblock %}
+
+{% block content %}
+<div class="container mt-4 d-flex justify-content-center">
+    <div class="w-100" style="max-width: 780px;">
+        <div id="rifasList" class="scroll-feed"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(function(){
+    $.getJSON('/api/rifas', function(rifas){
+        if(rifas.length === 0) {
+            $('#rifasList').html('<div class="alert alert-info">Nenhuma rifa ativa no momento.</div>');
+            return;
+        }
+        rifas.forEach(function(rifa){
+            let style = rifa.imagem_fundo ? `style="background-image:url('${rifa.imagem_fundo}');background-size:cover;background-position:center;"` : '';
+            $('#rifasList').append(`
+                <div class="card mb-4 feed-card" ${style}>
+                        ${rifa.imagem_premio ? `<img src="${rifa.imagem_premio}" class="card-img-top" alt="Prêmio">` : ''}
+                        <div class="card-body text-${rifa.imagem_fundo ? 'white' : 'dark'}">
+                            <h5 class="card-title">${rifa.titulo}</h5>
+                            <p class="card-text"><b>Prêmio:</b> ${rifa.descricao_premio || '-'}</p>
+                            <p><b>Preço por número:</b> R$ ${Number(rifa.valor_numero).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                            <p><b>Data do sorteio:</b> ${rifa.data_fim ? rifa.data_fim.split('-').reverse().join('/') : '-'}</p>
+                            <a href="/rifa/${rifa.id}" class="btn btn-success w-100 mt-2">Participar</a>
+                        </div>
+                    </div>
+            `);
+        });
+    });
+});
+</script>
+{% endblock %}

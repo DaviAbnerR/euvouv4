@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Grupo Eu Vou{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <!-- Navbar Bootstrap -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid d-flex justify-content-between align-items-center">
+    <!-- Esquerda: logo + Festas -->
+    <div class="d-flex align-items-center">
+        <a class="navbar-brand" href="/">
+            <img src="/static/euvou_logo.png" alt="EuVou" height="45" class="d-inline-block align-text-top">
+        </a>
+        <a class="nav-link text-white px-2" href="/festas">Festas</a>
+    </div>
+
+    <!-- Direita: Painel, Carrinho, Login/Sair -->
+    <div class="d-flex align-items-center">
+        {% if session.get('usuario_id') %}
+            <a class="nav-link text-white px-2" href="/painel">Painel</a>
+        {% endif %}
+
+        <a class="nav-link text-white px-2" href="/carrinho">Carrinho ({{ cart_count }})</a>
+
+        {% if session.get('usuario_id') %}
+            <span class="navbar-text text-white px-2">👤 {{ session.get('usuario_nome') }}</span>
+            <a class="btn btn-outline-light btn-sm ms-2" href="/logout">Sair</a>
+        {% else %}
+            <a class="btn btn-outline-light btn-sm ms-2" href="/login">Entrar</a>
+        {% endif %}
+    </div>
+</div>
+</nav>
+
+
+    <!-- Conteúdo das páginas -->
+    <div class="container mt-4">
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <div class="alert alert-info">
+              {{ messages[0] }}
+            </div>
+          {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </div>
+
+    <div class="position-fixed top-50 start-50 translate-middle p-3" style="z-index: 1100;">
+        <div id="cartToast" class="toast text-bg-success" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-body" id="cartToastBody">Produto adicionado ao carrinho</div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/main.js"></script>
+    <script>
+      window.gaMeasurementId = "{{ ga_measurement_id or '' }}";
+    </script>
+    <script src="/static/cookie_consent.js"></script>
+    {% if ga_measurement_id %}
+    <!-- Google Analytics loaded after consent -->
+    {% endif %}
+    {% block scripts %}{% endblock %}
+</body>
+</html>

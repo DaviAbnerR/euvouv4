@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Cartela #{{ cartela.numero_cartela }}{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="card mb-4">
+        <div class="card-body">
+            <h3 class="card-title">{{ rifa.titulo }}</h3>
+            <p class="card-text"><strong>Cartela #{{ cartela.numero_cartela }}</strong></p>
+            <p class="card-text"><b>Preço por número:</b> R$ {{ '%.2f' % rifa.valor_numero }}</p>
+        </div>
+    </div>
+    <div class="row" id="gradeNumeros">
+        {% for ficha in fichas %}
+        <div class="col-2 mb-3">
+            <div class="border rounded p-2 text-center {% if ficha.status == 'vendido' %}bg-danger text-white{% else %}bg-success text-dark{% endif %}">
+                <strong>#{{ (cartela.numero_cartela - 1) * 50 + ficha.numero }}</strong><br>
+                {% if ficha.status == 'vendido' %}
+                    <small>{{ ficha.comprador_nome }}</small>
+                {% else %}
+                    <form method="post" class="mt-1">
+                        <input type="hidden" name="numero" value="{{ ficha.numero }}">
+                        <input type="text" name="comprador_nome" class="form-control form-control-sm mb-1" placeholder="Nome" required>
+                        <button type="submit" class="btn btn-light btn-sm w-100">Vender</button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

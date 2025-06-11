@@ -1,0 +1,403 @@
+{% extends "base.html" %}
+{% block title %}Painel de Controle{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h1 class="display-5">Olá, {{ session['usuario_nome'] }} 👋</h1>
+        <p class="text-muted">Tipo de conta: <strong>{{ session['usuario_tipo'] }}</strong></p>
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="alert alert-warning">
+          {% for message in messages %}
+            <div>{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="row g-4">
+
+        <div class="col-12">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">📇 Meus Dados</h5>
+                    <form id="formDados" method="POST" action="{{ url_for('atualizar_dados') }}">
+                        <div class="mb-3">
+                            <label class="form-label" for="nome">Nome Completo</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="nome" name="nome" value="{{ usuario.nome }}" required disabled>
+                                <button type="button" class="btn btn-outline-secondary" onclick="toggleEdit('nome')">Editar</button>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="email">Email Principal</label>
+                            <div class="input-group">
+                                <input type="email" class="form-control" id="email" name="email" value="{{ usuario.email }}" required disabled>
+                                <button type="button" class="btn btn-outline-secondary" onclick="toggleEdit('email')">Editar</button>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="telefone">Telefone</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="telefone" name="telefone" value="{{ usuario.telefone or '' }}" placeholder="(DDD) 98765-4321" disabled>
+                                <button type="button" class="btn btn-outline-secondary" onclick="toggleEdit('telefone')">Editar</button>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Salvar Dados</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">🛒 Meus Produtos</h5>
+                    {% if minhas_fichas or meus_ingressos %}
+                        <h6>Fichas Compradas</h6>
+                        <ul class="list-group mb-3 scroll-list">
+                            {% for ficha, cartela, rifa in minhas_fichas %}
+                            <li class="list-group-item">
+                                Rifa {{ rifa.titulo }} - Cartela #{{ cartela.numero_cartela }} - Número {{ ficha.numero }}
+                            </li>
+                            {% endfor %}
+                            {% if not minhas_fichas %}
+                            <li class="list-group-item">Nenhuma ficha comprada.</li>
+                            {% endif %}
+                        </ul>
+                        <h6>Ingressos Comprados</h6>
+                        <ul class="list-group scroll-list">
+                            {% for ingresso, festa, data in meus_ingressos %}
+                            <li class="list-group-item">
+                                Festa {{ festa.nome }} - Data {{ data.data.strftime('%d/%m/%Y') if data else '-' }}
+                            </li>
+                            {% endfor %}
+                            {% if not meus_ingressos %}
+                            <li class="list-group-item">Nenhum ingresso comprado.</li>
+                            {% endif %}
+                        </ul>
+                    {% else %}
+                        <p class="mb-0">Nenhum produto comprado.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if session['usuario_tipo'] in ['organizador', 'administrador'] %}
+        <!-- Rifas -->
+        <div class="col-12">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h5 class="card-title mb-1">📦 Minhas Rifas</h5>
+                            <p class="card-text mb-0">Gerencie suas rifas, vendedores e cartelas:</p>
+                        </div>
+                        <button class="btn btn-success" onclick="$('#modalCriarRifa').modal('show')">Criar Rifa</button>
+                    </div>
+
+                    <label for="selectRifa">Gerenciar cartelas da rifa:</label>
+                    <select id="selectRifa" class="form-select mb-3">
+                        <option value="">Selecione...</option>
+                        {% for rifa in rifas %}
+                        <option value="{{ rifa.id }}">{{ rifa.titulo }}</option>
+                        {% endfor %}
+                    </select>
+                    <div id="painelCartelas" style="display:none;">
+                        <div id="listaCartelas" class="row g-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+          <div class="col-12 mt-4">
+      <div class="card shadow-sm h-100">
+          <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                  <div>
+                      <h5 class="card-title mb-1">🎉 Minhas Festas</h5>
+                      <p class="card-text mb-0">Gerencie festas, venda de ingressos e mais:</p>
+                  </div>
+                  <button class="btn btn-success" onclick="$('#modalCriarFesta').modal('show')">Criar Festa</button>
+              </div>
+              <!-- Painel de seleção/listagem de festas -->
+              <label for="selectFesta">Gerenciar ingressos da festa:</label>
+              <select id="selectFesta" class="form-select mb-3">
+                  <option value="">Selecione...</option>
+                  {% for festa in festas %}
+                  <option value="{{ festa.id }}">{{ festa.nome }}</option>
+                  {% endfor %}
+              </select>
+              <div id="painelIngressos" style="display:none;">
+                  <!-- As infos e ingressos vão aparecer aqui via JS -->
+                  <div id="infoFestaSelecionada" class="mb-3"></div>
+                  <div id="listaIngressos" class="row g-3"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+        {% endif %}
+
+
+    {% if session['usuario_tipo'] == 'administrador' %}
+    <!-- Admin -->
+    <div class="col-12">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 class="card-title mb-0">⚙️ Administração</h5>
+                </div>
+                <p class="card-text mb-2">Gerencie usuários e permissões.</p>
+                <button class="btn btn-danger w-100" onclick="abrirAdminModal()">Gerenciar Usuários</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    </div>
+
+    <div class="text-center mt-5">
+        <a href="/logout" class="btn btn-secondary">Sair da Conta</a>
+    </div>
+</div>
+
+<!-- Modal de Números -->
+<div class="modal fade" id="modalNumeros" tabindex="-1" aria-labelledby="modalNumerosLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalNumerosLabel">Números da Cartela</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row" id="gradeNumeros"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="inputBgRifa" accept="image/*" style="display:none">
+<input type="file" id="inputBgFesta" accept="image/*" style="display:none">
+
+<!-- Modal Criar Rifa -->
+<div class="modal fade" id="modalCriarRifa" tabindex="-1" aria-labelledby="modalCriarRifaLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content bg-light">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalCriarRifaLabel">Criar Nova Rifa</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="formCriarRifa">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="tituloRifa" class="form-label">Título da Rifa</label>
+            <input type="text" class="form-control" id="tituloRifa" required>
+          </div>
+          <div class="mb-3">
+            <label for="descricaoPremio" class="form-label">O que será sorteado?</label>
+            <input type="text" class="form-control" id="descricaoPremio" required>
+          </div>
+          <div class="mb-3">
+            <label for="valorNumero" class="form-label">Preço por número (R$)</label>
+            <input type="text" class="form-control" id="valorNumero" required autocomplete="off" inputmode="decimal" pattern="^\d+(,\d{0,2})?$">
+          </div>
+          <div class="mb-3">
+            <label for="dataInicio" class="form-label">Data de Início</label>
+            <input type="date" class="form-control" id="dataInicio" required>
+          </div>
+          <div class="mb-3">
+            <label for="dataFim" class="form-label">Data do Sorteio</label>
+            <input type="date" class="form-control" id="dataFim" required>
+          </div>
+          <div class="mb-3">
+            <label for="limiteNumeros" class="form-label">Limite de Números (opcional)</label>
+            <input type="number" class="form-control" id="limiteNumeros">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-success">Criar Rifa</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Alterar Preço -->
+<div class="modal fade" id="modalPreco" tabindex="-1" aria-labelledby="modalPrecoLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content bg-light">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalPrecoLabel">Alterar Preço da Rifa</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="formAlterarPreco">
+        <div class="modal-body">
+          <input type="hidden" id="idRifaAlterar">
+          <label for="novo_valor" class="form-label">Novo valor por número (R$):</label>
+          <input type="number" step="0.01" min="1" class="form-control" id="novo_valor" required>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Admin Usuários -->
+<div class="modal fade" id="adminModal" tabindex="-1" aria-labelledby="adminModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content bg-light">
+      <div class="modal-header">
+        <h5 class="modal-title" id="adminModalLabel">Painel de Administração</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="text" id="filtroUsuario" class="form-control mb-3" placeholder="Filtrar por nome ou e-mail...">
+        <div id="tabelaUsuarios"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modalSelecionarUsuario" tabindex="-1" aria-labelledby="modalSelecionarUsuarioLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content bg-light">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalSelecionarUsuarioLabel">Selecionar Vendedor</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <label for="selectUsuarioVendedor" class="form-label">Usuário autorizado:</label>
+        <select id="selectUsuarioVendedor" class="form-select"></select>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="btnConfirmarCriarCartelaVendedor">Criar Cartela</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Adicionar Vendedor -->
+<div class="modal fade" id="modalAdicionarVendedor" tabindex="-1" aria-labelledby="modalAdicionarVendedorLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content bg-light">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalAdicionarVendedorLabel">Adicionar Vendedor Autorizado</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <label for="inputBuscaVendedor" class="form-label">Buscar usuário:</label>
+        <input type="text" id="inputBuscaVendedor" class="form-control mb-2" placeholder="Digite nome ou sobrenome...">
+        <label for="selectUsuarioNovoVendedor" class="form-label">Selecione um usuário:</label>
+        <select id="selectUsuarioNovoVendedor" class="form-select"></select>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-success" id="btnConfirmarAdicionarVendedor">Adicionar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Gerenciar Vendedores -->
+<div class="modal fade" id="modalGerenciarVendedores" tabindex="-1" aria-labelledby="modalGerenciarVendedoresLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content bg-light">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalGerenciarVendedoresLabel">Vendedores Autorizados</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <ul id="listaVendedores" class="list-group"></ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Criar Festa -->
+<div class="modal fade" id="modalCriarFesta" tabindex="-1" aria-labelledby="modalCriarFestaLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content bg-light">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalCriarFestaLabel">Criar Nova Festa</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="formCriarFesta">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="nomeFesta" class="form-label">Nome da Festa</label>
+            <input type="text" class="form-control" id="nomeFesta" required>
+          </div>
+          <div class="mb-3">
+            <label for="localFesta" class="form-label">Local</label>
+            <input type="text" class="form-control" id="localFesta" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Datas da Festa</label>
+            <div id="datasFesta">
+              <input type="date" class="form-control mb-2 data-festa" required>
+            </div>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="btnAdicionarDataFesta">Adicionar Data</button>
+          </div>
+          <div class="mb-3">
+            <label for="valorIngresso" class="form-label">Valor do Ingresso (R$)</label>
+          <input type="text" class="form-control" id="valorIngresso" required inputmode="decimal" pattern="^\d+(,\d{0,2})?$">
+          </div>
+          <div class="mb-3">
+            <label for="descricaoFesta" class="form-label">Descrição da Festa</label>
+            <textarea class="form-control" id="descricaoFesta" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-success">Criar Festa</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Alterar Preço da Festa -->
+<div class="modal fade" id="modalPrecoFesta" tabindex="-1" aria-labelledby="modalPrecoFestaLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content bg-light">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalPrecoFestaLabel">Alterar Preço do Ingresso</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="formAlterarPrecoFesta">
+        <div class="modal-body">
+          <input type="hidden" id="idFestaAlterarPreco">
+          <label for="novo_valor_festa" class="form-label">Novo valor do ingresso (R$):</label>
+          <input type="text" class="form-control" id="novo_valor_festa" required autocomplete="off" inputmode="decimal" pattern="^\d+(,\d{0,2})?$">
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/festa.js"></script>
+<script>
+function toggleEdit(id) {
+    const input = document.getElementById(id);
+    input.disabled = !input.disabled;
+    if (!input.disabled) {
+        input.focus();
+    }
+}
+document.getElementById('formDados').addEventListener('submit', function() {
+    ['nome','email','telefone'].forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el) el.disabled = false;
+    });
+});
+</script>
+{% endblock %}

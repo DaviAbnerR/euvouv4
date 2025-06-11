@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Festas Ativas{% endblock %}
+
+{% block content %}
+<div class="container mt-4 d-flex justify-content-center">
+    <div class="w-100" style="max-width: 780px;">
+        <div id="festasList" class="scroll-feed"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(function(){
+    $.getJSON('/api/festas', function(festas){
+        if(festas.length === 0) {
+            $('#festasList').html('<div class="alert alert-info">Nenhuma festa disponível no momento.</div>');
+            return;
+        }
+        festas.forEach(function(festa){
+            let datas = festa.datas.map(d => d.split('-').reverse().join('/')).join(', ');
+            let style = festa.imagem_fundo ? `style="background-image:url('${festa.imagem_fundo}');background-size:cover;background-position:center;"` : '';
+            $('#festasList').append(`
+                <div class="card mb-4 feed-card" ${style}>
+                        <div class="card-body text-${festa.imagem_fundo ? 'white' : 'dark'}">
+                            <h5 class="card-title">${festa.nome}</h5>
+                            <p class="card-text"><b>Local:</b> ${festa.local}</p>
+                            <p><b>Descrição:</b> ${festa.descricao || '-'}</p>
+                            <p><b>Datas:</b> ${datas}</p>
+                            <p><b>Valor do ingresso:</b> R$ ${Number(festa.valor_ingresso).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                            <a href="/festa/${festa.id}" class="btn btn-primary w-100 mt-2">Comprar Ingresso</a>
+                        </div>
+                    </div>
+            `);
+        });
+    });
+});
+</script>
+{% endblock %}

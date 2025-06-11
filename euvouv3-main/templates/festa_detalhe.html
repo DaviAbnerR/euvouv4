@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Detalhe da Festa{% endblock %}
+
+{% block content %}
+<div class="container my-4 d-flex justify-content-center">
+    <div class="card feed-card" id="festaCard">
+        <div class="card-body">
+            <div id="infoFesta" class="mb-4"></div>
+            <div id="compraIngresso" style="display:none;">
+                <h4>Comprar Ingresso</h4>
+                <form id="formComprarIngresso">
+                    <div class="mb-2">
+                        <label>Escolha a data:</label>
+                        <select class="form-select form-select-sm" id="dataFestaSelect" name="data_festa_id" required></select>
+                    </div>
+                    <div class="mb-2">
+                        <label>Valor:</label>
+                        <input type="text" class="form-control form-control-sm" id="valorIngresso" readonly>
+                    </div>
+                    <div class="mb-2">
+                        <label>Quantidade:</label>
+                        <input type="number" class="form-control form-control-sm" id="quantidadeIngresso" value="1" min="1">
+                    </div>
+                    <button type="submit" class="btn btn-success">Comprar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const idFesta = "{{ id_festa }}";
+$(function(){
+    $.getJSON(`/api/festa/${idFesta}`, function(festa){
+        const card = $('#festaCard');
+        if(festa.imagem_fundo){
+            card.css({
+                'background-image': `url('${festa.imagem_fundo}')`,
+                'background-size': 'cover',
+                'background-position': 'center'
+            });
+            card.find('.card-body').addClass('text-white');
+        }
+        let datasHtml = festa.datas.map(d =>
+            `<option value="${d.id}">${d.data.split('-').reverse().join('/')}</option>`
+        ).join('');
+        let descricao = festa.descricao || '-';
+        $('#infoFesta').html(`
+            <h3>${festa.nome}</h3>
+            <p><b>Local:</b> ${festa.local}</p>
+            <p><b>Descrição:</b> ${descricao}</p>
+            <p><b>Datas disponíveis:</b> ${festa.datas.map(d => d.data.split('-').reverse().join('/')).join(', ')}</p>
+            <p><b>Valor do ingresso:</b> R$ ${Number(festa.valor_ingresso).toLocaleString('pt-BR', {minimumFractionDigits:2})}</p>
+            <p><b>Total vendido:</b> ${festa.total_vendidos}</p>
+            <p><b>Valor arrecadado:</b> R$ ${Number(festa.valor_total).toLocaleString('pt-BR', {minimumFractionDigits:2})}</p>
+        `);
+        if(festa.datas && festa.datas.length > 0) {
+            $('#dataFestaSelect').html(datasHtml);
+            $('#valorIngresso').val('R$ ' + Number(festa.valor_ingresso).toLocaleString('pt-BR', {minimumFractionDigits:2}));
+            $('#compraIngresso').show();
+        }
+    });
+
+    $('#formComprarIngresso').on('submit', function(e){
+        e.preventDefault();
+        let data_festa_id = $('#dataFestaSelect').val();
+        let valor_pago = $('#valorIngresso').val().replace(/\./g, '').replace('R$ ', '').replace(',', '.');
+        let quantidade = parseInt($('#quantidadeIngresso').val()) || 1;
+        $.ajax({
+            url: '/api/carrinho/ingresso',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                festa_id: idFesta,
+                data_festa_id: data_festa_id,
+                valor: valor_pago,
+                quantidade: quantidade
+            }),
+            success: function(resp){
+                if(!resp.ok){
+                    alert(resp.msg || 'Erro ao adicionar.');
+                } else {
+                    showCartMessage('Produto adicionado ao carrinho');
+                    updateCartCount();
+                }
+            },
+            error: function(xhr){
+                alert(xhr.responseJSON && xhr.responseJSON.msg ? xhr.responseJSON.msg : 'Erro ao adicionar.');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

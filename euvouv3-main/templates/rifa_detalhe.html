@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Detalhe da Rifa{% endblock %}
+
+{% block content %}
+<div class="container my-4 d-flex justify-content-center">
+    <div class="card feed-card" id="rifaCard">
+        <div class="card-body">
+            <div id="infoRifa" class="mb-4"></div>
+            <div id="cartelasRifa" class="row"></div>
+        </div>
+    </div>
+    <div id="modalNumeros" class="modal fade" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalNumerosLabel">Cartela</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row" id="gradeNumeros"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const idRifa = "{{ id_rifa }}";
+$(function(){
+    $.getJSON(`/api/rifa/${idRifa}`, function(rifa){
+        const card = $('#rifaCard');
+        if(rifa.imagem_fundo){
+            card.css({
+                'background-image': `url('${rifa.imagem_fundo}')`,
+                'background-size': 'cover',
+                'background-position': 'center'
+            });
+            card.find('.card-body').addClass('text-white');
+        }
+        let vencedorInfo = '';
+        if(rifa.status === 'finalizada') {
+            vencedorInfo = `<p class="mt-3 h5">Ganhador do Prêmio: <b>${rifa.vencedor_nome || ''}</b> (#${rifa.numero_vencedor || ''})</p>`;
+        }
+        $('#infoRifa').html(`
+            <h3>${rifa.titulo}</h3>
+            <p><b>Prêmio:</b> ${rifa.descricao_premio || '-'}</p>
+            <p><b>Preço por número:</b> R$ ${Number(rifa.valor_atual).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+            <p><b>Data do sorteio:</b> ${rifa.data_fim ? rifa.data_fim.split('-').reverse().join('/') : '-'}</p>
+            <p><b>Total vendido:</b> ${rifa.fichas_vendidas}</p>
+            <p><b>Valor arrecadado:</b> R$ ${Number(rifa.valor_total_vendido).toLocaleString('pt-BR', {minimumFractionDigits:2})}</p>
+            ${vencedorInfo}
+        `);
+        if(rifa.status !== 'finalizada') {
+            $.getJSON(`/api/rifa/${idRifa}/cartelas`, function(cartelas){
+                if(cartelas.length === 0){
+                    $('#cartelasRifa').html('<div class="alert alert-info">Nenhuma cartela criada para esta rifa.</div>');
+                    return;
+                }
+                cartelas.forEach(function(cartela){
+                    $('#cartelasRifa').append(`
+                        <div class="col-md-4">
+                            <div class="card mb-4 cartela-card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Cartela #${cartela.numero_cartela}</h5>
+                                    <p class="cartela-nome mb-2">${cartela.criador}</p>
+                                    <p class="card-text">
+                                        <b>Vendidos:</b> ${cartela.vendidos}
+                                    </p>
+                                    <button class="btn btn-primary btn-sm me-2 btn-ver-numeros" data-id="${cartela.id}" data-numero="${cartela.numero_cartela}">Ver Números</button>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                });
+            });
+            $('#cartelasRifa').on('click', '.btn-ver-numeros', function(){
+                const id = $(this).data('id');
+                const numero = $(this).data('numero');
+                abrirNumeros(id, numero);
+            });
+        }
+    });
+});
+
+function abrirNumeros(idCartela, numeroCartela) {
+    $('#modalNumerosLabel').text(`Cartela #${numeroCartela}`);
+    $('#gradeNumeros').html('');
+    $.getJSON(`/api/cartela/${idCartela}`, function(fichas) {
+        fichas.forEach(function(ficha, idx) {
+            let numeroAbsoluto = (numeroCartela - 1) * 50 + ficha.numero;
+            let cls = 'bg-success text-dark';
+            let conteudo = `<button id="btn-num-${idCartela}-${ficha.numero}" class="btn btn-success btn-sm mt-1" onclick="comprarNumero(${idCartela},${ficha.numero})">Adicionar</button>`;
+            if (ficha.status == 'vendido') {
+                cls = 'bg-danger text-white';
+                conteudo = `<small>${ficha.comprador}</small>`;
+            } else if (ficha.status == 'reservado') {
+                cls = 'bg-warning text-dark';
+                conteudo = '<small>Reservado</small>';
+            }
+            $('#gradeNumeros').append(`
+                <div class="col-2 mb-3">
+                    <div class="border rounded p-2 text-center ${cls}" id="box-${idCartela}-${ficha.numero}">
+                        <strong>#${numeroAbsoluto}</strong><br>
+                        ${conteudo}
+                    </div>
+                </div>
+            `);
+        });
+        new bootstrap.Modal(document.getElementById('modalNumeros')).show();
+    });
+}
+
+function comprarNumero(idCartela, numero){
+    $.ajax({
+        url: '/api/carrinho/ficha',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({id_cartela: idCartela, numero: numero}),
+        success: function(resp){
+            const box = $('#box-'+idCartela+'-'+numero);
+            box.removeClass('bg-success').addClass('bg-warning');
+            box.find('button').remove();
+            box.append('<small>Reservado</small>');
+            showCartMessage('Produto adicionado ao carrinho');
+            updateCartCount();
+        },
+        error: function(xhr){
+            alert(xhr.responseJSON && xhr.responseJSON.msg ? xhr.responseJSON.msg : 'Erro ao adicionar.');
+        }
+    });
+}
+</script>
+{% endblock %}

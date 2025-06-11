@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Meu Carrinho{% endblock %}
+{% block content %}
+<h1>Meu Carrinho</h1>
+{% if itens or fichas or ingressos %}
+<table class="table">
+    <thead>
+        <tr>
+            <th>Item</th>
+            <th class="text-end">Qtd</th>
+            <th class="text-end">Preço</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in itens %}
+        <tr>
+            <td>{{ item.produto.nome }}</td>
+            <td class="text-end">{{ item.quantidade }}</td>
+            <td class="text-end">R$ {{ '%.2f'|format(item.total) }}</td>
+            <td></td>
+        </tr>
+        {% endfor %}
+        {% for f in fichas %}
+        <tr>
+            <td>Número {{ f.numero }} - {{ f.rifa.titulo }}</td>
+            <td class="text-end">1</td>
+            <td class="text-end">R$ {{ '%.2f'|format(f.valor) }}</td>
+            <td>
+                <button class="btn btn-sm btn-danger remove-ficha" data-cartela="{{ f.cartela_id }}" data-numero="{{ f.numero }}">Remover</button>
+            </td>
+        </tr>
+        {% endfor %}
+        {% for i in ingressos %}
+        <tr>
+            <td>Ingresso - {{ i.festa.nome }} ({{ i.data.data.strftime('%d/%m/%Y') if i.data }})</td>
+            <td class="text-end">{{ i.quantidade }}</td>
+            <td class="text-end">R$ {{ '%.2f'|format(i.total) }}</td>
+            <td>
+                <button class="btn btn-sm btn-danger remove-ingresso" data-festa="{{ i.festa.id }}" data-data="{{ i.data.id }}">Remover Unid.</button>
+                <button class="btn btn-sm btn-warning remove-ingresso-all" data-festa="{{ i.festa.id }}" data-data="{{ i.data.id }}">Remover tudo</button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            <th colspan="2" class="text-end">Subtotal</th>
+            <th class="text-end">R$ {{ '%.2f'|format(total) }}</th>
+            <th></th>
+        </tr>
+        <tr>
+            <th colspan="2" class="text-end">Taxa de Serviço</th>
+            <th class="text-end">R$ {{ '%.2f'|format(taxa_servico) }}</th>
+            <th></th>
+        </tr>
+        <tr>
+            <th colspan="2" class="text-end"><b>Total</b></th>
+            <th class="text-end"><b>R$ {{ '%.2f'|format(total_com_taxa) }}</b></th>
+            <th></th>
+        </tr>
+    </tfoot>
+</table>
+<form method="post" action="/finalizar_compra">
+    <button type="submit" class="btn btn-success">Finalizar Compra</button>
+</form>
+{% else %}
+<p>Seu carrinho está vazio.</p>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(function(){
+    $('.remove-ficha').on('click', function(){
+        const cartela = $(this).data('cartela');
+        const numero = $(this).data('numero');
+        $.ajax({
+            url: '/api/carrinho/ficha/remover',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({cartela_id: cartela, numero: numero}),
+            success: function(){
+                location.reload();
+            }
+        });
+    });
+    $('.remove-ingresso').on('click', function(){
+        const festa = $(this).data('festa');
+        const dataId = $(this).data('data');
+        $.ajax({
+            url: '/api/carrinho/ingresso/remover',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({festa_id: festa, data_festa_id: dataId}),
+            success: function(){
+                location.reload();
+            }
+        });
+    });
+    $('.remove-ingresso-all').on('click', function(){
+        const festa = $(this).data('festa');
+        const dataId = $(this).data('data');
+        $.ajax({
+            url: '/api/carrinho/ingresso/remover_todos',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({festa_id: festa, data_festa_id: dataId}),
+            success: function(){
+                location.reload();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}Minhas Cartelas{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Minhas Cartelas</h1>
+<div class="row mb-4">
+    <div class="col-md-6">
+        <form method="POST">
+            <div class="mb-3">
+                <label for="id_rifa" class="form-label">Selecione a Rifa</label>
+                <select name="id_rifa" id="id_rifa" class="form-select">
+                    {% for rifa in rifas %}
+                    <option value="{{ rifa.id }}">{{ rifa.titulo }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Criar Cartela</button>
+        </form>
+    </div>
+</div>
+
+{% if cartelas %}
+<h2 class="h4">Cartelas Criadas</h2>
+<div class="row">
+    {% for cartela in cartelas %}
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Cartela #{{ cartela.numero_cartela }}</h5>
+                <p class="card-text">Rifa ID {{ cartela.id_rifa }}</p>
+                <a href="{{ url_for('cartela', id_cartela=cartela.id) }}" class="btn btn-outline-primary btn-sm">Abrir</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<p>Nenhuma cartela criada ainda.</p>
+{% endif %}
+{% endblock %}
