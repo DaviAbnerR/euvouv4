@@ -3,12 +3,13 @@ body {
     margin: 0;
     padding: 0;
     background: linear-gradient(to right, 
-        #cce4f6 0%,       /* azul claro pastel na esquerda */
-        #3399cc 50%,      /* azul médio no centro */
-        #cce4f6 100%      /* azul claro pastel na direita */
+        #BFBFBF 0%,       /* azul claro pastel na esquerda */
+        #55545493 50%,      /* azul médio no centro */
+        #BFBFBF 100%      /* azul claro pastel na direita */
     );
-    color: #333;
+    color: #404040;
 }
+
 
 
 header {
